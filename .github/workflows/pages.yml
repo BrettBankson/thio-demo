@@ -23,8 +23,13 @@ jobs:
         with:
           repository: BrettBankson/Field-Logic-Solutions
           ref: main
-          token: ${{ secrets.SRC_REPO_PAT }}   # <— read-only token you just added
+          token: ${{ secrets.SRC_REPO_PAT }}
           path: src
+
+      - name: Show repo & HEAD (debug)
+        run: |
+          git -C src rev-parse --short HEAD
+          ls -la src
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -37,17 +42,25 @@ jobs:
         working-directory: src
         run: npm ci
 
-      - name: Build for GitHub Pages
+      - name: Build for GitHub Pages (Vite + esbuild run separately)
         working-directory: src
         env:
           GH_PAGES: "1"
           VITE_ALLOW_DEBUG_ROUTE: "true"
           VITE_DEMO_MODE: "true"
         run: |
-          npm run build -- --base=/thio-demo/
+          set -euxo pipefail
+          # 1) Vite build with the correct base path
+          npx vite build --base=/thio-demo/
+          # 2) Run the server build (no --base here)
+          npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+          # 3) Prepare Pages artifact
           mkdir -p site
           cp -r dist/public/* site/
-          cp site/index.html site/404.html    # SPA fallback
+          test -f site/index.html
+          cp site/index.html site/404.html
+          echo "Site contents:"
+          find site -maxdepth 2 -type f | sed 's/^/ - /'
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
