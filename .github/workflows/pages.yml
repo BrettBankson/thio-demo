@@ -18,19 +18,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # Pull the app source from your main repo
-      - name: Checkout Field-Logic-Solutions
+      - name: Checkout Field-Logic-Solutions (private)
         uses: actions/checkout@v4
         with:
           repository: BrettBankson/Field-Logic-Solutions
           ref: main
+          token: ${{ secrets.SRC_REPO_PAT }}   # <— read-only token you just added
           path: src
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: src/package-lock.json
 
       - name: Install deps
@@ -47,8 +47,7 @@ jobs:
           npm run build -- --base=/thio-demo/
           mkdir -p site
           cp -r dist/public/* site/
-          # SPA fallback so deep links work (e.g. /__pm-direct)
-          cp site/index.html site/404.html
+          cp site/index.html site/404.html    # SPA fallback
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -67,4 +66,3 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-
