@@ -19,30 +19,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
       - run: npm ci
 
       - name: Build demo for GitHub Pages
         env:
-          GH_PAGES: "1"
+          # enable your debug route in the static demo
           VITE_ALLOW_DEBUG_ROUTE: "true"
           VITE_DEMO_MODE: "true"
         run: |
           npm run build -- --base=/${{ github.event.repository.name }}/
-          mkdir -p dist/public
-          [ -f dist/index.html ] && mv dist/index.html dist/public/index.html || true
-          [ -f dist/public/index.html ] && cp dist/public/index.html dist/public/404.html
+          # --- SPA fallback so deep links work on GitHub Pages ---
+          if [ -f dist/index.html ]; then
+            cp dist/index.html dist/404.html
+          elif [ -f dist/public/index.html ]; then
+            # some projects output to dist/public
+            cp dist/public/index.html dist/public/404.html
+          else
+            echo "Could not find built index.html" && exit 1
+          fi
 
       - uses: actions/configure-pages@v5
-
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist/public
+          # upload the folder that actually exists
+          path: |
+            dist
+            dist/public
 
   deploy:
     environment:
